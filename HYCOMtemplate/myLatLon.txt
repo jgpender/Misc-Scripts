@@ -1,0 +1,11 @@
+# The idea is to put lat and lon in one place, then have the bash
+# scripts refer to this file. 
+# NOTE: The grid file has to be one data point larger in all 4 directions.
+# The HYCOM data is .08 deg intervals so you have to add/subtract .08
+# from the lat/lon in this file.
+
+
+latMin=4
+latMax=11
+lonMin=120
+lonMax=138

@@ -1,0 +1,7 @@
+The idea is to set a script lurking with lots of sleep time. 
+	bash lurk.bash
+
+
+If the script finds new files in the netcdf directory then it runs the basin averages matlab script.
+
+NOTE: this script needs to be run in a VNC window so that you don't need to babysit it.

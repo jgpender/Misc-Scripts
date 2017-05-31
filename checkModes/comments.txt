@@ -1,0 +1,26 @@
+It is becoming more and more clear that using a single reference set of
+N2(z) and rho(z) to calculate the modes for an entire experiment is a bad
+idea.
+
+1) I noticed some time ago that if the modes are clamped at any
+particular value then the eigencoefficients are not allowed the time
+deviation they're entitled to. The longer the experiment runs the worse
+this problem gets.
+
+2) I have just now gone through the business of calculating the 
+displacement. If rho(z) is not so different from the reference
+stratification rho0(z) then the general experession for D (already
+assuming rho0(z) can be pulled out of the integral)
+	rho(z) - rho0(z) = rho0/g Integral[_z ^zNew N20(z) dz]
+where 
+	D = zNew-z
+
+can be simplified. Specifically, if zNew-z is small then N20(z) is nearly
+constant so you can write
+	D = zNew-z
+	  ~ g/rho0(z) (rho - rho0) / N20(z)
+
+The thing is, D at shallow depths (<200 m) is very often high by a good 
+factor of 3 or 4. This bugs me, but the eigencoefficent calculation is
+weighted by dz, which is small for these very depths, so maybe I should 
+just shut up. Or use small t. Or deploy my find-the-mode scheme.

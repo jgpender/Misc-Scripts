@@ -1,0 +1,81 @@
+netcdf HYCOM_GLBa0.08_PALAU_grid {
+dimensions:
+	ocean_time = 1 ;
+	Y = 88 ;
+	X = 101 ;
+	z = 33 ;
+variables:
+	float ssh(ocean_time, Y, X) ;
+		ssh:_CoordinateAxes = "Longitude Latitude Date MT Y X " ;
+		ssh:coordinates = "MT Latitude Longitude lat lon" ;
+		ssh:standard_name = "sea_surface_elevation" ;
+		ssh:units = "m" ;
+		ssh:_FillValue = 1.267651e+30f ;
+		ssh:long_name = " sea surf. height  [91.2H]" ;
+	double ocean_time(ocean_time) ;
+		ocean_time:long_name = "time" ;
+		ocean_time:units = "days since 1900-12-31 00:00:00" ;
+		ocean_time:calendar = "standard" ;
+		ocean_time:axis = "T" ;
+		ocean_time:_CoordinateAxisType = "Time" ;
+	float lat(Y, X) ;
+		lat:_CoordinateAxes = "Y X " ;
+		lat:standard_name = "latitude" ;
+		lat:units = "degrees_north" ;
+		lat:_CoordinateAxisType = "Lat" ;
+	float lon(Y, X) ;
+		lon:_CoordinateAxes = "Y X " ;
+		lon:standard_name = "longitude" ;
+		lon:units = "degrees_east" ;
+		lon:modulo = "360 degrees" ;
+		lon:_CoordinateAxisType = "Lon" ;
+	float salt(ocean_time, z, Y, X) ;
+		salt:_CoordinateAxes = "Longitude Latitude Date MT Depth Y X " ;
+		salt:coordinates = "MT Depth Latitude Longitude lat lon" ;
+		salt:standard_name = "sea_water_salinity" ;
+		salt:units = "psu" ;
+		salt:_FillValue = 1.267651e+30f ;
+		salt:long_name = " salinity [91.2H]" ;
+	float z(z) ;
+		z:standard_name = "depth" ;
+		z:units = "m" ;
+		z:positive = "down" ;
+		z:axis = "Z" ;
+		z:_CoordinateAxisType = "Height" ;
+		z:_CoordinateZisPositive = "down" ;
+	float temp(ocean_time, z, Y, X) ;
+		temp:_CoordinateAxes = "Longitude Latitude Date MT Depth Y X " ;
+		temp:coordinates = "MT Depth Latitude Longitude lat lon" ;
+		temp:standard_name = "sea_water_potential_temperature" ;
+		temp:units = "degC" ;
+		temp:_FillValue = 1.267651e+30f ;
+		temp:long_name = "  temp [91.2H]" ;
+	float u(ocean_time, z, Y, X) ;
+		u:_CoordinateAxes = "Longitude Latitude Date MT Depth Y X " ;
+		u:coordinates = "MT Depth Latitude Longitude lat lon" ;
+		u:standard_name = "eastward_sea_water_velocity" ;
+		u:units = "m/s" ;
+		u:_FillValue = 1.267651e+30f ;
+		u:long_name = " u-veloc. [91.2H]" ;
+	float v(ocean_time, z, Y, X) ;
+		v:_CoordinateAxes = "Longitude Latitude Date MT Depth Y X " ;
+		v:coordinates = "MT Depth Latitude Longitude lat lon" ;
+		v:standard_name = "northward_sea_water_velocity" ;
+		v:units = "m/s" ;
+		v:_FillValue = 1.267651e+30f ;
+		v:long_name = " v-veloc. [91.2H]" ;
+
+// global attributes:
+		:Conventions = "CF-1.0" ;
+		:title = "HYCOM GLBa0.08" ;
+		:institution = "Naval Research Laboratory" ;
+		:source = "HYCOM archive file" ;
+		:experiment = "91.2" ;
+		:history = "archv2ncdf2d for run date 2017010318" ;
+		:History = "Translated to CF-1.0 Conventions by Netcdf-Java CDM (CFGridWriter2)\n",
+			"Original Dataset = GLBa0.08/expt_91.2/2016; Translation Date = 2017-03-04T00:38:42.812Z" ;
+		:geospatial_lat_min = 4.07660007476807 ;
+		:geospatial_lat_max = 10.9722995758057 ;
+		:geospatial_lon_min = 130. ;
+		:geospatial_lon_max = 138. ;
+}

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+job=11761
+#echo $job
+
+status=`squeue -u jgpender | grep $job |  tail -c 29 | cut -d " " -f1`
+#echo $status
+
+while [ $status == "R" ]
+do
+#	echo "Still running.   "`date`
+	status=`squeue -u jgpender | grep $job |  tail -c 29 | cut -d " " -f1`
+	bash ./bat.bash
+
+	sleep 600
+done
+
+
+bash ./bat.bash
+
+
+echo "job is done"

@@ -1,0 +1,184 @@
+clear;
+
+% The raw data is in ../netcdfOutput, as usual, but it's convenient to
+% squash the data into single files, like this:
+%   ncrcat ../netcdfOutput/TS_his_* TS_his.nc
+%   ncrcat ../netcdfOutput/TS_his2_* TS_his2.nc
+
+grid = roms_get_grid('../TS_0.25.nc','TS_his.nc',0,1);
+Z_r  = -flipdim(grid.z_r,1);
+Z_w  = -flipdim(grid.z_w,1);
+
+U   = flipdim(nc_varget('./TS_his.nc','u_eastward') ,2);
+V   = flipdim(nc_varget('./TS_his.nc','v_northward'),2);
+RHO = flipdim(nc_varget('./TS_his.nc','rho')        ,2);
+N2_w  = flipdim(nc_varget('./TS_his.nc','w')          ,2);
+
+[nt,nz,ny,nx]=size(U);
+
+N2_r  = .5*( N2_w(:,1:end-1,:,:) + N2_w(:,2:end,:,:) );
+
+
+%% Here is a question:
+%   If I were to recalculate the modes on every snapshot and then find the
+%   coefficients, how different would they be?
+
+% ii=30; jj=60;           % mode 1 looks good
+ii=30; jj=90          % lots of variation
+
+
+nVel = 3;
+nRho = 3;
+
+P  = zeros(nVel,nt,nz);
+PX = zeros(nVel,nt,nz);
+W  = zeros(nRho,nt,nz);
+WX = zeros(nRho,nt,nz);
+R  = zeros(nRho,nt,nz);
+RX = zeros(nRho,nt,nz);
+
+for tt=1:nt
+if ( grid.mask_rho(jj,ii) == 1 )
+
+    z_r = Z_r(:,jj,ii);
+    z_w = Z_w(:,jj,ii);
+    dz  = diff(z_w);
+
+    P_r = sw_pres(z_r,-43);
+    P_w = sw_pres(z_w,-43);
+    rho_r = RHO(tt,:,jj,ii)';
+
+    n2_w = N2_w(tt,:,jj,ii)';n2_w(n2_w<1e-8)=1e-8;
+    n2_r = N2_r(tt,:,jj,ii)';n2_r(n2_r<1e-8)=1e-8;
+
+    [w, p, ce, Pout]=ROMS_dynmodes_jgp(n2_w,P_w,P_r);       
+%         p = [ones(nz,1)/1030. p];    // barotropic mode
+
+    pX = 0*p;
+    for nn = 1:nVel;    % nVel modes are relevant
+        p(:,nn) = p(:,nn)/sign(p(1,nn));
+        pnorm = p(1,nn);
+        
+         p(:,nn) = p(:,nn)/pnorm;
+        pX(:,nn) = p(:,nn) .* dz /sum( p(:,nn).^2 .* dz );          
+
+        % archive
+         P(nn,tt,:) =  p(:,nn);
+        PX(nn,tt,:) = pX(:,nn);
+
+    end; %nn
+
+    wX = 0*w;
+    r  = 0*w;
+    rX = 0*w;
+    for nn = 1:nRho;    % nRho modes are relevant
+         w(:,nn) = w(:,nn)/sign(w(1,nn));
+
+         r(:,nn) = w(:,nn).*n2_r;     
+        rX(:,nn) = (w(:,nn) .* dz) /sum( w(:,nn).^2 .* n2_r .* dz);   
+
+        % archive
+         W(nn,tt,:) =  w(:,nn);
+        WX(nn,tt,:) = wX(:,nn);   
+         R(nn,tt,:) =  r(:,nn);
+        RX(nn,tt,:) = rX(:,nn);  
+
+    end % nn
+
+else
+    'masked out'
+end % if
+end;% tt
+done('time')
+
+% The next step is to calculate the rho eigencoefficients.
+eigR0 = zeros(nRho,tt);
+eigR = zeros(nRho,tt);
+
+    tRef = 1;
+
+for tt=1:nt; for nn=1:nRho
+
+    n2_r = N2_r(tt,:,jj,ii)';  % n2_r(n2_r<1e-8)=1e-8;
+    rho  = RHO(tt,:,jj,ii)';
+
+% case 1: find the eigencoefficients from the t=0 wmodes excluding rho  
+        num = dot(sq(W(nn,tRef,:)) .* dz,rho_r);
+        denom = sum( n2_r .* sq(W(nn,1,:)).^2 .* dz  );  
+        eigR0(nn,tt) = num/denom;
+
+    
+% case 2: find the eigencoefficients from the updated wmodes excluding rho  
+        num = dot(sq(W(nn,tt,:)) .* dz,rho_r);
+        denom = sum( n2_r .* sq(W(nn,tt,:)).^2 .* dz  );  
+        eigR(nn,tt) = num/denom;
+
+end;end;
+
+fig(1);clf;
+subplot(3,1,1);plot(eigR0(1,:));hold on;plot(eigR(1,:),'r');xlabel('days');ylabel('mode 1')
+subplot(3,1,2);plot(eigR0(2,:));hold on;plot(eigR(2,:),'r');xlabel('days');ylabel('mode 2')
+subplot(3,1,3);plot(eigR0(3,:));hold on;plot(eigR(3,:),'r');xlabel('days');ylabel('mode 3')
+
+fig(2);clf;
+subplot(3,1,1);plot(z_r,sq(W(1,:,:))');ylabel('wmode 1');axis([0 max(z_r) 0 1.1]);xlabel('z')
+subplot(3,1,2);plot(z_r,sq(W(2,:,:))');ylabel('wmode 2');axis([0 max(z_r) -1.1 1.1]);xlabel('z')
+subplot(3,1,3);plot(z_r,sq(W(3,:,:))');ylabel('wmode 3');axis([0 max(z_r) -1.1 1.1]);xlabel('z')
+
+
+%% Fiddle with normalization of wmodes
+
+% % % % Check RMS of each wmode
+% % % 
+% % % eigR_Rho0_norm = zeros(nRho,tt);
+% % % eigR_Rho_norm  = zeros(nRho,tt);
+% % % 
+% % % Wnorm = zeros(nRho,nt,nz);
+% % % for tt=1:nt; for nn=1:nRho
+% % %     rms = sqrt(dot(sq(W(nn,tt,:)),sq(W(nn,tt,:))));
+% % %     Wnorm(nn,tt,:) = sq(W(nn,tt,:))/rms;
+% % %     end;end
+% % % rms;
+% % % 
+% % % 
+% % % % fig(10);clf;plot(z_r,sq(W(nn,1:20:end,:))');xlabel('z')
+% % % % fig(11);clf;plot(z_r,sq(Wnorm(nn,1:20:end,:))');xlabel('z')
+% % % 
+% % % for tt=1:nt; for nn=1:nRho
+% % % 
+% % %     n2_r = N2_r(tt,:,jj,ii)';  % n2_r(n2_r<1e-8)=1e-8;
+% % %     rho  = RHO(tt,:,jj,ii)';
+% % %         
+% % % % case 2: find the eigencoefficients from the t=0 wmodes excluding rho  
+% % %         num = dot(sq(Wnorm(nn,tRef,:)) .* dz,rho_r);
+% % %         denom = sum( n2_r .* sq(Wnorm(nn,tRef,:)).^2 .* dz  );  
+% % %         eigR_noRho0_norm(nn,tt) = num/denom;
+% % %     
+% % % % case 4: find the eigencoefficients from the updated wmodes excluding rho  
+% % %         num = dot(sq(Wnorm(nn,tt,:)) .* dz,rho_r);
+% % %         denom = sum( n2_r .* sq(Wnorm(nn,tt,:)).^2 .* dz  );  
+% % %         eigR_noRho_norm(nn,tt) = num/denom;
+% % % 
+% % % end;end;
+% % % 
+% % % % fig(1);clf;
+% % % % subplot(3,2,1);plot(eigR_Rho0(1,:));hold on;plot(eigR_Rho(1,:),'r');ylabel('mode 1');title('Include rho');
+% % % % subplot(3,2,2);plot(eigR_noRho0(1,:));hold on;plot(eigR_noRho(1,:),'r');ylabel('mode 1');title('Exclude rho');
+% % % % subplot(3,2,3);plot(eigR_Rho0(2,:));hold on;plot(eigR_Rho(2,:),'r');ylabel('mode 2');title('Include rho');
+% % % % subplot(3,2,4);plot(eigR_noRho0(2,:));hold on;plot(eigR_noRho(2,:),'r');ylabel('mode 2');title('Exclude rho');
+% % % % subplot(3,2,5);plot(eigR_Rho0(3,:));hold on;plot(eigR_Rho(3,:),'r');ylabel('mode 3');title('Include rho');
+% % % % subplot(3,2,6);plot(eigR_noRho0(3,:));hold on;plot(eigR_noRho(3,:),'r');ylabel('mode 3');title('Exclude rho');
+% % % 
+% % % fig(3);clf;
+% % % subplot(3,1,1);plot(eigR_noRho0_norm(1,:));hold on;plot(eigR_noRho_norm(1,:),'r');xlabel('days');ylabel('mode 1')
+% % % subplot(3,1,2);plot(eigR_noRho0_norm(2,:));hold on;plot(eigR_noRho_norm(2,:),'r');xlabel('days');ylabel('mode 2')
+% % % subplot(3,1,3);plot(eigR_noRho0_norm(3,:));hold on;plot(eigR_noRho_norm(3,:),'r');xlabel('days');ylabel('mode 3')
+% % % 
+% % % 
+% % % 
+% % % 
+% % % fig(4);clf;
+% % % subplot(3,1,1);Wnorm(1,:,:);lim=max(ans(:));plot(z_r,sq(Wnorm(1,:,:))');ylabel('wmode 1');xlabel('z');axis([0 max(z_r) 0 lim])
+% % % subplot(3,1,2);abs(Wnorm(2,:,:));lim=max(ans(:));plot(z_r,sq(Wnorm(2,:,:))');ylabel('wmode 2');xlabel('z');axis([0 max(z_r) -lim lim])
+% % % subplot(3,1,3);abs(Wnorm(3,:,:));lim=max(ans(:));plot(z_r,sq(Wnorm(3,:,:))');ylabel('wmode 3');xlabel('z');axis([0 max(z_r) -lim lim])
+% % % 
